@@ -300,6 +300,52 @@
 
     .result strong { color: #f0c77e; font-style: normal; }
 
+    .quote-card {
+      display: grid;
+      grid-template-columns: 35px minmax(0, 1fr);
+      align-items: start;
+      gap: 14px;
+      margin-top: 20px;
+      padding: 18px 20px;
+      border: 1px solid var(--line);
+      border-left: 2px solid var(--quote-accent, #e8bc73);
+      background: rgba(10, 12, 12, .28);
+      animation: quote-arrive .45s ease both;
+    }
+
+    .quote-card[hidden] { display: none; }
+    .quote-card[data-side="tide"] { --quote-accent: #8db9a5; }
+    .quote-icon { width: 30px; height: 30px; color: var(--quote-accent); }
+    .quote-label {
+      margin: 0 0 8px;
+      color: var(--quote-accent);
+      font-size: .59rem;
+      font-weight: 750;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .quote-text {
+      margin: 0;
+      color: #e6dfd0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: .99rem;
+      font-style: italic;
+      line-height: 1.65;
+    }
+
+    .quote-credit {
+      margin: 8px 0 0;
+      color: #777b73;
+      font-size: .58rem;
+      letter-spacing: .05em;
+    }
+
+    @keyframes quote-arrive {
+      from { opacity: 0; transform: translateY(7px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .flip-button {
       width: 100%;
       min-height: 60px;
@@ -387,6 +433,7 @@
       .coin-stage { gap: 17px; padding: 20px 0 12px; }
       .coin-button { width: clamp(205px, 62vw, 270px); height: clamp(205px, 62vw, 270px); }
       .flip-button { min-height: 58px; }
+      .quote-card { margin-top: 16px; padding: 15px; }
       .stats { margin-top: 20px; }
       .bottom-row { justify-content: center; margin-top: 12px; }
       .sound-button, .reset-button { min-height: 44px; }
@@ -413,7 +460,15 @@
 <body>
   <main class="app">
     <header class="topbar">
-      <p class="brand"><span class="brand-mark" aria-hidden="true">✳</span> The Decision Room</p>
+      <p class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M12 2v4m0 12v4M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83m0-14.14-2.83 2.83m-8.48 8.48-2.83 2.83" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </span>
+        The Decision Room
+      </p>
       <span class="edition">Artifact No. 01 &nbsp;·&nbsp; Est. 2025</span>
     </header>
 
@@ -465,6 +520,23 @@
           <div class="result" id="result" aria-live="polite">Ready when you are</div>
         </section>
 
+        <aside class="quote-card" id="quoteCard" data-side="sun" aria-label="Original advice" hidden>
+          <div aria-hidden="true">
+            <svg class="quote-icon" id="sunQuoteIcon" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M16 2.5v5M16 24.5v5M2.5 16h5m17 0h5M6.45 6.45l3.54 3.54m12.02 12.02 3.54 3.54m0-19.1-3.54 3.54M9.99 22.01l-3.54 3.54" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <svg class="quote-icon" id="tideQuoteIcon" viewBox="0 0 32 32" fill="none" hidden>
+              <path d="M3 11c4.3 0 4.3-3.5 8.6-3.5S15.9 11 20.2 11s4.3-3.5 8.6-3.5M3 17c4.3 0 4.3-3.5 8.6-3.5s4.3 3.5 8.6 3.5 4.3-3.5 8.6-3.5M3 23c4.3 0 4.3-3.5 8.6-3.5s4.3 3.5 8.6 3.5 4.3-3.5 8.6-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <p class="quote-label" id="quoteLabel">The Sun · Field note</p>
+            <blockquote class="quote-text" id="quoteText" aria-live="polite"></blockquote>
+            <p class="quote-credit">An original reflection from the Decision Room</p>
+          </div>
+        </aside>
+
         <button class="flip-button" id="flipButton" type="button">Cast the coin <span aria-hidden="true">↗</span></button>
 
         <section class="stats" aria-label="Flip statistics">
@@ -489,6 +561,11 @@
       const flipButton = document.getElementById("flipButton");
       const resetButton = document.getElementById("resetButton");
       const soundButton = document.getElementById("soundButton");
+      const quoteCard = document.getElementById("quoteCard");
+      const quoteLabel = document.getElementById("quoteLabel");
+      const quoteText = document.getElementById("quoteText");
+      const sunQuoteIcon = document.getElementById("sunQuoteIcon");
+      const tideQuoteIcon = document.getElementById("tideQuoteIcon");
       const resultLabel = document.getElementById("result");
       const announcement = document.getElementById("announcement");
       const headsCount = document.getElementById("headsCount");
@@ -504,6 +581,136 @@
       let soundEnabled = true;
       let audioContext;
       let noiseBuffer;
+
+      const advice = {
+        sun: {
+          actions: [
+            "Choose", "Name", "Protect", "Measure", "Clarify", "Practice",
+            "Study", "Build", "Write down", "Prioritize", "Question",
+            "Strengthen", "Review", "Plan for", "Value", "Create", "Track",
+            "Reduce", "Compare", "Reserve", "Keep", "Invest in"
+          ],
+          focuses: [
+            "the next useful step", "the outcome that matters most",
+            "the cost before the reward", "a boundary around your time",
+            "the fact beneath the noise", "a skill that compounds",
+            "a promise you can keep", "a small win worth repeating",
+            "the work only you can do", "a reserve for uncertain days",
+            "the option that preserves choice", "a habit that earns trust",
+            "the price of delay", "a goal you can measure",
+            "the people who raise your standard", "a calm response under pressure",
+            "the difference between urgent and important", "a plan with room to adapt",
+            "the lesson inside a setback", "the long view before acting",
+            "an honest account of your resources", "the finish line before you start"
+          ],
+          lessons: [
+            "Clear aims make effort easier to direct.",
+            "Consistency can turn a modest advantage into lasting progress.",
+            "Confidence is strongest when it rests on preparation.",
+            "An honest measure is more useful than a flattering guess.",
+            "Protecting attention is a practical form of self-respect.",
+            "Good work leaves room for a better second draft.",
+            "Small, repeatable wins build durable momentum.",
+            "Knowing when to stop can preserve tomorrow's options.",
+            "Trust grows when actions match promises.",
+            "Useful ambition makes space for learning.",
+            "Time is easier to budget than to recover.",
+            "Restraint can keep a good opportunity alive.",
+            "Preparation helps you act without rushing.",
+            "Progress shows up in the habits you maintain.",
+            "Long-term value is rarely built in a single burst.",
+            "Ask what evidence would change your mind.",
+            "Good decisions include the cost of their alternatives.",
+            "A simple plan is easier to revisit and improve.",
+            "Fair terms make cooperation stronger.",
+            "A calm pause can improve a consequential choice.",
+            "Make success repeatable, not merely impressive.",
+            "Leave a margin for surprises and mistakes."
+          ]
+        },
+        tide: {
+          actions: [
+            "Notice", "Observe", "Respect", "Review", "Question",
+            "Prepare for", "Learn from", "Make room for", "Check", "Measure",
+            "Protect", "Reconsider", "Track", "Listen to", "Be honest about",
+            "Take care with", "Look beyond", "Stay alert to", "Plan around",
+            "Pause over", "Set a limit on", "Leave room for"
+          ],
+          focuses: [
+            "the conditions around you", "a risk you can survive",
+            "the signal beneath the noise", "the strength of your position",
+            "the value of keeping options open", "the resources you may need later",
+            "the difference between price and value", "a change that asks for patience",
+            "the room another person needs", "the point where effort stops helping",
+            "a promise made under pressure", "the pattern behind a setback",
+            "a choice you can reverse", "the cost of being wrong",
+            "the benefit of waiting one more beat", "the limit of your current knowledge",
+            "a small expense that repeats", "a habit you can sustain",
+            "the terms before you agree", "a path that reduces avoidable risk",
+            "a useful lesson from loss", "the moment to begin again"
+          ],
+          lessons: [
+            "Patience is active when it protects a better choice.",
+            "A reserve buys time as well as security.",
+            "A reversible choice can be a useful experiment.",
+            "Risk is easier to carry when it is understood.",
+            "Flexibility matters most when circumstances change.",
+            "Compounding rewards the person who can stay steady.",
+            "Listen for the need behind the first reaction.",
+            "Taking a pause is not the same as giving up.",
+            "Compare the downside with what you can afford to lose.",
+            "Strong boundaries make generous choices sustainable.",
+            "Recovery is part of progress, not an interruption.",
+            "Change the method before abandoning a worthy aim.",
+            "Long-term peace can be worth more than a quick win.",
+            "Keep enough room to respond to new information.",
+            "Debt adds tomorrow's choices to today's decision.",
+            "Simple routines can steady you through uncertainty.",
+            "Good timing often begins with careful observation.",
+            "Do not confuse motion with meaningful progress.",
+            "Rest allows effort to remain useful.",
+            "Your best option may be the one you can maintain.",
+            "An exit plan makes a risk more deliberate.",
+            "After a loss, protect your ability to try again."
+          ]
+        }
+      };
+
+      function createQuoteDeck(count) {
+        const deck = Array.from({ length: count }, (_, index) => index);
+        for (let index = deck.length - 1; index > 0; index -= 1) {
+          const swapIndex = Math.floor(Math.random() * (index + 1));
+          [deck[index], deck[swapIndex]] = [deck[swapIndex], deck[index]];
+        }
+        return deck;
+      }
+
+      function quoteCount(set) {
+        return set.actions.length * set.focuses.length * set.lessons.length;
+      }
+
+      const quoteDecks = {
+        sun: createQuoteDeck(quoteCount(advice.sun)),
+        tide: createQuoteDeck(quoteCount(advice.tide))
+      };
+
+      function showAdvice(side) {
+        const set = advice[side];
+        const deck = quoteDecks[side];
+        const index = deck.pop();
+        const focusIndex = index % set.focuses.length;
+        const actionIndex = Math.floor(index / set.focuses.length) % set.actions.length;
+        const lessonIndex = Math.floor(index / (set.focuses.length * set.actions.length));
+        const sideName = side === "sun" ? "The Sun" : "The Tide";
+
+        quoteText.textContent = `${set.actions[actionIndex]} ${set.focuses[focusIndex]}. ${set.lessons[lessonIndex]}`;
+        quoteLabel.textContent = `${sideName} · Field note`;
+        quoteCard.dataset.side = side;
+        sunQuoteIcon.hidden = side !== "sun";
+        tideQuoteIcon.hidden = side !== "tide";
+        quoteCard.hidden = false;
+        announcement.textContent = `${sideName} advice: ${quoteText.textContent}`;
+      }
 
       function getAudioContext() {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -665,7 +872,7 @@
           tailsCount.textContent = String(tails);
           totalCount.textContent = String(heads + tails);
           resultLabel.innerHTML = `It's <strong>${result}.</strong>`;
-          announcement.textContent = `It's ${result}. Heads: ${heads}. Tails: ${tails}.`;
+          showAdvice(result === "heads" ? "sun" : "tide");
           flipping = false;
           flipButton.disabled = false;
         }, flipDuration);
@@ -687,6 +894,8 @@
         tailsCount.textContent = "0";
         totalCount.textContent = "0";
         resultLabel.textContent = "Ready when you are";
+        quoteCard.hidden = true;
+        quoteText.textContent = "";
         delete resultLabel.dataset.lastResult;
         announcement.textContent = "Flip statistics reset.";
       });
